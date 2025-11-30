@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Antigravity Claude Grok</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Rajdhani', sans-serif;
+            background: #000000;
+            color: #D4C5A0;
+            /* Beige */
+        }
+
+        canvas {
+            display: block;
+            outline: none;
+        }
+
+        /* Minimal UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            padding: 20px;
+        }
+
+        /* Top Left Title */
+        #brand {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #D4C5A0;
+            text-transform: uppercase;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        h1:hover {
+            opacity: 1;
+        }
+
+        .subtitle {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #8c8268;
+            margin-top: 4px;
+        }
+
+        /* Top Right Stats - Minimal */
+        #stats-bar {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            display: flex;
+            gap: 30px;
+            pointer-events: auto;
+        }
+
+        .stat-item {
+            text-align: right;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #665f4d;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            color: #D4C5A0;
+        }
+
+        /* Bottom Controls - Floating Capsule */
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(212, 197, 160, 0.2);
+            padding: 10px 25px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+        }
+
+        #controls:hover {
+            border-color: rgba(212, 197, 160, 0.5);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: #D4C5A0;
+            font-size: 18px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+        }
+
+        .btn-icon:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .separator {
+            width: 1px;
+            height: 20px;
+            background: rgba(212, 197, 160, 0.2);
+        }
+
+        /* Slider Styling */
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 2px;
+            background: rgba(212, 197, 160, 0.2);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #D4C5A0;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.5);
+        }
+
+        /* Collapsible Info Panel */
+        #info-toggle {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(212, 197, 160, 0.3);
+            background: rgba(0, 0, 0, 0.5);
+            color: #D4C5A0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.3s;
+            z-index: 20;
+        }
+
+        #info-toggle:hover {
+            background: #D4C5A0;
+            color: #000;
+        }
+
+        #info-panel {
+            position: absolute;
+            bottom: 80px;
+            right: 30px;
+            width: 250px;
+            background: rgba(5, 5, 5, 0.95);
+            border: 1px solid rgba(212, 197, 160, 0.2);
+            padding: 20px;
+            border-radius: 4px;
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        #info-panel.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(212, 197, 160, 0.1);
+            padding-bottom: 4px;
+        }
+
+        .info-row:last-child {
+            border: none;
+        }
+
+        .info-label {
+            color: #8c8268;
+        }
+
+        .info-data {
+            color: #D4C5A0;
+            font-family: 'Orbitron', monospace;
+        }
+
+        /* Narration - Minimal Subtitle */
+        #narration {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 14px;
+            color: #D4C5A0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            max-width: 600px;
+            letter-spacing: 1px;
+        }
+
+        #narration.visible {
+            opacity: 1;
+        }
+
+        /* Loading Overlay */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 1s ease;
+        }
+
+        .loader-text {
+            font-family: 'Orbitron', sans-serif;
+            color: #D4C5A0;
+            letter-spacing: 5px;
+            font-size: 24px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 3D Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Layer -->
+    <div id="ui-layer">
+        <div id="brand">
+            <h1>Warehouse Antigravity Claude</h1>
+            <div class="subtitle">ENHANCED LOGIC FLOW</div>
+        </div>
+
+        <div id="stats-bar">
+            <div class="stat-item">
+                <span class="stat-label">System</span>
+                <span class="stat-value" id="status-val">ACTIVE</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Received</span>
+                <span class="stat-value" id="received-val">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Shipped</span>
+                <span class="stat-value" id="shipped-val">0</span>
+            </div>
+        </div>
+
+        <div id="narration"></div>
+
+        <div id="controls">
+            <button class="btn-icon" id="play-btn" title="Play/Pause">⏸</button>
+            <div class="separator"></div>
+            <button class="btn-icon" id="reset-btn" title="Reset Camera">⟲</button>
+            <div class="separator"></div>
+            <button class="btn-icon" id="reset-packages-btn" title="Reset Packages">📦</button>
+            <div class="separator"></div>
+            <button class="btn-icon" id="sound-btn" title="Toggle Sound">🔊</button>
+            <div class="separator"></div>
+            <div class="slider-group">
+                <span style="font-size: 10px; color: #8c8268;">SPEED</span>
+                <input type="range" id="speed-slider" min="10" max="300" value="100">
+            </div>
+        </div>
+
+        <div id="info-toggle" title="System Details">ℹ</div>
+        <div id="info-panel">
+            <div class="info-row">
+                <span class="info-label">Robots</span>
+                <span class="info-data">6 UNITS</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Operators</span>
+                <span class="info-data">4 STAFF</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Entry</span>
+                <span class="info-data">RECEIVING</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Exit</span>
+                <span class="info-data">SHIPPING</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Flow Rate</span>
+                <span class="info-data">OPTIMAL</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="loader">
+        <div class="loader-text">INITIALIZING ENHANCED LOGIC</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ============================================
+        // CONFIGURATION & STATE
+        // ============================================
+        const CONFIG = {
+            colors: {
+                bg: 0x000000,
+                fog: 0x000000,
+                floor: 0x151515,
+                grid: 0x333333,
+                beige: 0xD4C5A0,
+                darkBeige: 0x8c8268,
+                gold: 0x998855,
+                machine: 0x2a2a2a,
+                machineHighlight: 0x444444,
+                lightWarm: 0xffeebb,
+                lightCold: 0xaaccff,
+                entry: 0xffffff, // White/Beige for entry
+                exit: 0xffaa00   // Gold/Orange for exit
+            },
+            speed: 1.0
+        };
+
+        let state = {
+            isPlaying: true,
+            soundEnabled: true,
+            receivedCount: 0,
+            shippedCount: 0,
+            time: 0
+        };
+
+        // ============================================
+        // AUDIO SYSTEM
+        // ============================================
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let ambientOsc = null;
+        let ambientGain = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            startAmbient();
+        }
+
+        function startAmbient() {
+            if (!state.soundEnabled || !audioCtx || ambientOsc) return;
+            try {
+                ambientOsc = audioCtx.createOscillator();
+                ambientGain = audioCtx.createGain();
+
+                // Lowpass filter for "drone" sound
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 100;
+
+                ambientOsc.connect(filter);
+                filter.connect(ambientGain);
+                ambientGain.connect(audioCtx.destination);
+
+                ambientOsc.type = 'sawtooth';
+                ambientOsc.frequency.value = 40; // Deep drone
+
+                ambientGain.gain.value = 0.03; // Very subtle
+                ambientOsc.start();
+            } catch (e) { }
+        }
+
+        function stopAmbient() {
+            if (ambientOsc) {
+                try {
+                    ambientOsc.stop();
+                    ambientOsc.disconnect();
+                    ambientOsc = null;
+                } catch (e) { }
+            }
+        }
+
+        function playTone(freq, type = 'sine', duration = 0.1, vol = 0.05) {
+            if (!state.soundEnabled || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = freq;
+                osc.type = type;
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) { }
+        }
+
+        // ============================================
+        // NARRATION SYSTEM - ENHANCED WITH NATURAL VOICE
+        // ============================================
+        const narrations = [
+            "New package received from incoming delivery.",
+            "Precision robot inspecting component quality.",
+            "Quality verification complete. Approved.",
+            "Mid-range manipulator adjusting item orientation.",
+            "Loading robot transferring to shipping line.",
+            "Package entering shipping bay.",
+            "Forklift ready for transport.",
+            "All automation systems operational.",
+            "Incoming door active.",
+            "Outgoing door processing shipments.",
+            "Robot scanning package contents.",
+            "Human operator monitoring system flow.",
+            "Automated sorting in progress.",
+            "Quality control checkpoint passed."
+        ];
+        let narrationIndex = 0;
+
+        function scheduleNarration() {
+            const delay = 10000 + Math.random() * 10000;
+            setTimeout(() => {
+                if (state.isPlaying) {
+                    showNarration(narrations[narrationIndex]);
+                    narrationIndex = (narrationIndex + 1) % narrations.length;
+                }
+                scheduleNarration();
+            }, delay);
+        }
+
+        let narrationTimeout;
+        function showNarration(text) {
+            const el = document.getElementById('narration');
+            el.innerText = text;
+            el.classList.add('visible');
+            clearTimeout(narrationTimeout);
+
+            // ENHANCED Voice Synthesis - More Natural
+            if (state.soundEnabled && 'speechSynthesis' in window) {
+                const voices = speechSynthesis.getVoices();
+
+                // Enhanced voice selection - prefer natural, high-quality voices
+                const preferred = voices.find(v =>
+                    // Google voices (high quality)
+                    v.name.includes('Google US English') ||
+                    v.name.includes('Google UK English Female') ||
+                    v.name.includes('Google UK English Male') ||
+                    // Microsoft natural voices
+                    v.name.includes('Microsoft Aria') ||
+                    v.name.includes('Microsoft Jenny') ||
+                    v.name.includes('Microsoft Guy') ||
+                    // Apple voices (macOS/iOS)
+                    v.name.includes('Samantha') ||
+                    v.name.includes('Alex') ||
+                    v.name.includes('Karen') ||
+                    // Chrome natural voices
+                    (v.name.includes('en-US') && v.localService === false)
+                ) || voices.find(v =>
+                    // Fallback to any natural-sounding English voice
+                    v.lang.startsWith('en') && !v.name.includes('eSpeak')
+                );
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                if (preferred) utterance.voice = preferred;
+
+                // Natural voice settings (not robotic)
+                utterance.rate = 1.0;    // Normal speed
+                utterance.pitch = 1.0;   // Natural pitch (was 0.8 - too robotic)
+                utterance.volume = 0.7;  // Slightly louder for clarity
+
+                speechSynthesis.speak(utterance);
+            }
+
+            narrationTimeout = setTimeout(() => {
+                el.classList.remove('visible');
+            }, 4000);
+        }
+
+        // ============================================
+        // SCENE SETUP
+        // ============================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(CONFIG.colors.bg);
+        scene.fog = new THREE.Fog(CONFIG.colors.fog, 40, 180);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(50, 40, 50);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.5;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const mainSpot = new THREE.SpotLight(CONFIG.colors.lightWarm, 2.5);
+        mainSpot.position.set(50, 80, 20);
+        mainSpot.angle = Math.PI / 4;
+        mainSpot.penumbra = 0.5;
+        mainSpot.castShadow = true;
+        mainSpot.shadow.mapSize.width = 2048;
+        mainSpot.shadow.mapSize.height = 2048;
+        scene.add(mainSpot);
+
+        const fillLight = new THREE.PointLight(CONFIG.colors.lightCold, 0.8);
+        fillLight.position.set(-30, 20, -30);
+        scene.add(fillLight);
+
+        const fillLight2 = new THREE.PointLight(CONFIG.colors.beige, 0.5);
+        fillLight2.position.set(0, 40, 0);
+        scene.add(fillLight2);
+
+        // Floor
+        const floorGeo = new THREE.PlaneGeometry(200, 200);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: CONFIG.colors.floor,
+            roughness: 0.4,
+            metalness: 0.6
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Grid
+        const gridHelper = new THREE.GridHelper(200, 50, CONFIG.colors.darkBeige, CONFIG.colors.grid);
+        gridHelper.position.y = 0.01;
+        gridHelper.material.opacity = 0.4;
+        gridHelper.material.transparent = true;
+        scene.add(gridHelper);
+
+        // ============================================
+        // OBJECT CLASSES
+        // ============================================
+
+        // --- Conveyor System ---
+        class ConveyorSegment {
+            constructor(start, end) {
+                this.group = new THREE.Group();
+                this.rollers = [];
+
+                const length = start.distanceTo(end);
+                const width = 2;
+
+                // Frame - FIXED: Position frame properly so packages sit on top
+                const geo = new THREE.BoxGeometry(width, 0.3, length);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.2 });
+                const mesh = new THREE.Mesh(geo, mat);
+
+                const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                mesh.position.copy(mid);
+                mesh.position.y = 0.85; // Frame sits at y=0.85
+                mesh.lookAt(end);
+
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                this.group.add(mesh);
+
+                // Rollers - FIXED: Position rollers at correct height
+                const rollerCount = Math.floor(length / 0.5);
+                const rollerGeo = new THREE.CylinderGeometry(0.08, 0.08, width, 8);
+                const rollerMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.5 });
+
+                const direction = new THREE.Vector3().subVectors(end, start).normalize();
+                const step = length / rollerCount;
+
+                for (let i = 0; i < rollerCount; i++) {
+                    const roller = new THREE.Mesh(rollerGeo, rollerMat);
+                    const dist = (i - rollerCount / 2 + 0.5) * step;
+                    const pos = mid.clone().add(direction.clone().multiplyScalar(dist));
+
+                    roller.position.copy(pos);
+                    roller.position.y = 1.0; // Rollers at y=1.0, so packages sit at y=1.2
+
+                    const rollerContainer = new THREE.Object3D();
+                    rollerContainer.position.copy(pos);
+                    rollerContainer.lookAt(end);
+                    rollerContainer.add(roller);
+                    roller.rotation.z = Math.PI / 2;
+
+                    this.group.add(rollerContainer);
+                    this.rollers.push(roller);
+                }
+
+                // Legs - FIXED: Add legs at regular intervals to prevent floating
+                // Always add legs at start and end
+                this.addLeg(start);
+                this.addLeg(end);
+                
+                // Add additional legs for longer segments (every 10 units)
+                const legSpacing = 10;
+                const legCount = Math.floor(length / legSpacing);
+                if (legCount > 1) {
+                    for (let i = 1; i < legCount; i++) {
+                        const legPos = start.clone().lerp(end, i / legCount);
+                        this.addLeg(legPos);
+                    }
+                }
+
+                scene.add(this.group);
+            }
+
+            addLeg(pos) {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.85, 8), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+                leg.position.copy(pos);
+                leg.position.y = 0.425; // Leg center at y=0.425, so bottom is at y=0 (ground level)
+                leg.castShadow = true;
+                leg.receiveShadow = true;
+                this.group.add(leg);
+            }
+
+            animate(speed) {
+                this.rollers.forEach(r => {
+                    r.rotation.x += speed * 0.2;
+                });
+            }
+        }
+
+        // --- Conveyor with Rug Surface (Ground Level) ---
+        class ConveyorRug {
+            constructor(start, end) {
+                this.group = new THREE.Group();
+                this.rollers = [];
+
+                const length = start.distanceTo(end);
+                const width = 2;
+
+                // Rug surface - sits directly on the ground
+                const rugGeo = new THREE.BoxGeometry(width, 0.1, length);
+                const rugMat = new THREE.MeshStandardMaterial({ 
+                    color: 0x333333, 
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+                const rug = new THREE.Mesh(rugGeo, rugMat);
+
+                const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                rug.position.copy(mid);
+                rug.position.y = 0.05; // Rug sits just above ground (y=0.05)
+                rug.lookAt(end);
+
+                rug.castShadow = true;
+                rug.receiveShadow = true;
+                this.group.add(rug);
+
+                // Add texture pattern to make it look like a rug/conveyor belt
+                const patternGeo = new THREE.BoxGeometry(width * 0.95, 0.02, length * 0.95);
+                const patternMat = new THREE.MeshStandardMaterial({ 
+                    color: 0x444444, 
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                const pattern = new THREE.Mesh(patternGeo, patternMat);
+                pattern.position.copy(mid);
+                pattern.position.y = 0.11;
+                pattern.lookAt(end);
+                this.group.add(pattern);
+
+                // Side rails for structure
+                const railHeight = 0.2;
+                const railGeo = new THREE.BoxGeometry(0.1, railHeight, length);
+                const railMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7 });
+                
+                [-width/2 + 0.05, width/2 - 0.05].forEach(offset => {
+                    const rail = new THREE.Mesh(railGeo, railMat);
+                    rail.position.copy(mid);
+                    rail.position.y = railHeight / 2;
+                    const direction = new THREE.Vector3().subVectors(end, start).normalize();
+                    const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x);
+                    rail.position.add(perpendicular.multiplyScalar(offset));
+                    rail.lookAt(end);
+                    rail.castShadow = true;
+                    this.group.add(rail);
+                });
+
+                // Rollers removed - no function needed
+
+                scene.add(this.group);
+            }
+
+            animate(speed) {
+                // No rollers to animate
+            }
+        }
+
+        // --- Production Machine (inside IN gate) ---
+        class ProductionMachine {
+            constructor(position) {
+                this.group = new THREE.Group();
+                const mat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.7, roughness: 0.3 });
+                const accentMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8, roughness: 0.2 });
+                const glowMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.5 });
+
+                // Main production chamber
+                const chamber = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 2), mat);
+                chamber.position.y = 1;
+                chamber.castShadow = true;
+                this.group.add(chamber);
+
+                // Production output chute
+                const chute = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1.5), accentMat);
+                chute.position.set(0, 0.4, 1.5);
+                this.group.add(chute);
+
+                // Production indicator lights
+                [-1, 0, 1].forEach(x => {
+                    const light = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.12, 8, 8),
+                        glowMat
+                    );
+                    light.position.set(x, 1.8, 1.1);
+                    this.group.add(light);
+                });
+
+                // Control panel
+                const panel = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 0.1), accentMat);
+                panel.position.set(0, 1.5, -1.05);
+                this.group.add(panel);
+
+                // Conveyor output belt (connects to main belt)
+                const outputBelt = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 0.1, 2),
+                    new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 })
+                );
+                outputBelt.position.set(0, 0.05, 2.5);
+                this.group.add(outputBelt);
+
+                this.group.position.copy(position);
+                scene.add(this.group);
+            }
+
+            animate(t) {
+                // Pulsing production lights
+                const lights = this.group.children.filter(c => c.geometry && c.geometry.type === 'SphereGeometry');
+                lights.forEach((light, i) => {
+                    const intensity = 0.3 + Math.sin(t * 4 + i) * 0.2;
+                    light.material.emissiveIntensity = intensity;
+                });
+            }
+        }
+
+        // --- Extended Belt (disappears into void at OUT gate) ---
+        class ExtendedBelt {
+            constructor(start, end) {
+                this.group = new THREE.Group();
+                const length = start.distanceTo(end);
+                const width = 2;
+
+                // Create multiple segments that fade out
+                const segmentCount = 5;
+                const segmentLength = length / segmentCount;
+
+                for (let i = 0; i < segmentCount; i++) {
+                    const segmentStart = start.clone().lerp(end, i / segmentCount);
+                    const segmentEnd = start.clone().lerp(end, (i + 1) / segmentCount);
+                    const segmentMid = segmentStart.clone().lerp(segmentEnd, 0.5);
+
+                    // Fade opacity based on distance
+                    const fadeProgress = i / segmentCount;
+                    const opacity = 1 - fadeProgress * 0.8; // Fade to 20% opacity
+
+                    const beltGeo = new THREE.BoxGeometry(width, 0.1, segmentLength);
+                    const beltMat = new THREE.MeshStandardMaterial({
+                        color: 0x333333,
+                        roughness: 0.9,
+                        metalness: 0.1,
+                        transparent: true,
+                        opacity: opacity
+                    });
+                    const belt = new THREE.Mesh(beltGeo, beltMat);
+                    belt.position.copy(segmentMid);
+                    belt.position.y = 0.05;
+                    belt.lookAt(segmentEnd);
+                    belt.castShadow = true;
+                    belt.receiveShadow = true;
+                    this.group.add(belt);
+
+                    // Side rails (also fade)
+                    const railHeight = 0.2;
+                    const railGeo = new THREE.BoxGeometry(0.1, railHeight, segmentLength);
+                    const railMat = new THREE.MeshStandardMaterial({
+                        color: 0x222222,
+                        metalness: 0.7,
+                        transparent: true,
+                        opacity: opacity
+                    });
+
+                    [-width/2 + 0.05, width/2 - 0.05].forEach(offset => {
+                        const rail = new THREE.Mesh(railGeo, railMat);
+                        rail.position.copy(segmentMid);
+                        rail.position.y = railHeight / 2;
+                        const direction = new THREE.Vector3().subVectors(segmentEnd, segmentStart).normalize();
+                        const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x);
+                        rail.position.add(perpendicular.multiplyScalar(offset));
+                        rail.lookAt(segmentEnd);
+                        rail.castShadow = true;
+                        this.group.add(rail);
+                    });
+                }
+
+                scene.add(this.group);
+            }
+
+            animate(speed) {
+                // No animation needed
+            }
+        }
+
+        // --- Door System ---
+        class Door {
+            constructor(position, type = 'entry') {
+                this.group = new THREE.Group();
+                this.type = type;
+                this.lights = [];
+                this.productionMachine = null;
+
+                const frameColor = 0x333333;
+                const lightColor = type === 'entry' ? CONFIG.colors.entry : CONFIG.colors.exit;
+
+                // Posts
+                [-5, 5].forEach(x => {
+                    const post = new THREE.Mesh(new THREE.BoxGeometry(0.5, 8, 0.5), new THREE.MeshStandardMaterial({ color: frameColor }));
+                    post.position.set(x, 4, 0);
+                    post.castShadow = true;
+                    this.group.add(post);
+                });
+
+                // Top Beam
+                const beam = new THREE.Mesh(new THREE.BoxGeometry(10.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: frameColor }));
+                beam.position.y = 8;
+                beam.castShadow = true;
+                this.group.add(beam);
+
+                // Rolled Door
+                const doorGeo = new THREE.CylinderGeometry(0.8, 0.8, 9, 16);
+                const doorMat = new THREE.MeshStandardMaterial({ color: lightColor, roughness: 0.6 });
+                const door = new THREE.Mesh(doorGeo, doorMat);
+                door.position.set(0, 7, 0.2);
+                door.rotation.z = Math.PI / 2;
+                this.group.add(door);
+
+                // Sign
+                const signText = type === 'entry' ? 'IN' : 'OUT';
+                const signTexture = this.createSignTexture(signText, lightColor);
+                const signGeo = new THREE.BoxGeometry(8, 1.5, 0.15);
+                const signMat = new THREE.MeshStandardMaterial({ map: signTexture, color: 0xffffff });
+                const sign = new THREE.Mesh(signGeo, signMat);
+                sign.position.set(0, 9.2, 0);
+                this.group.add(sign);
+
+                // Lights
+                [-3.5, 3.5].forEach(x => {
+                    const light = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshStandardMaterial({ color: lightColor, emissive: lightColor }));
+                    light.position.set(x, 8.6, 0.5);
+                    this.group.add(light);
+                    this.lights.push(light);
+
+                    const pl = new THREE.PointLight(lightColor, 0.8, 8);
+                    pl.position.copy(light.position);
+                    this.group.add(pl);
+                    this.lights.push(pl);
+                });
+
+                this.group.position.copy(position);
+                if (type === 'entry') this.group.rotation.y = Math.PI / 2;
+                if (type === 'exit') this.group.rotation.y = Math.PI / 2;
+
+                scene.add(this.group);
+            }
+
+            createSignTexture(text, colorHex) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#111111';
+                ctx.fillRect(0, 0, 256, 64);
+
+                // Border
+                ctx.strokeStyle = '#' + colorHex.toString(16).padStart(6, '0');
+                ctx.lineWidth = 4;
+                ctx.strokeRect(2, 2, 252, 60);
+
+                ctx.font = 'bold 40px Orbitron';
+                ctx.fillStyle = '#' + colorHex.toString(16).padStart(6, '0');
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, 128, 32);
+
+                const tex = new THREE.CanvasTexture(canvas);
+                return tex;
+            }
+
+            animate(t) {
+                const intensity = 0.5 + (Math.sin(t * 5 + (this.type === 'entry' ? 0 : Math.PI)) * 0.5 + 0.5);
+                this.lights.forEach(l => {
+                    if (l.isPointLight) l.intensity = intensity * 0.8;
+                    else l.material.emissiveIntensity = intensity;
+                });
+                
+                // Animate production machine if it exists
+                if (this.productionMachine) {
+                    this.productionMachine.animate(t);
+                }
+            }
+        }
+
+        // --- ENHANCED Robot Arm with FUNCTIONAL BEHAVIOR ---
+        class RobotArm {
+            constructor(position, type = 'precision') {
+                this.group = new THREE.Group();
+                this.group.position.copy(position);
+                this.joints = [];
+                this.type = type;
+                this.timer = Math.random() * 100;
+                this.pistons = [];
+                this.targetPackage = null;
+                this.isScanning = false;
+                this.scanBeam = null;
+                this.scanTimer = 0;
+
+                this.createDetailedArm();
+                scene.add(this.group);
+            }
+
+            createDetailedArm() {
+                const matBody = new THREE.MeshStandardMaterial({ color: CONFIG.colors.machine, metalness: 0.7, roughness: 0.3 });
+                const matJoint = new THREE.MeshStandardMaterial({ color: CONFIG.colors.beige, metalness: 0.5, roughness: 0.5 });
+                const matAccent = new THREE.MeshStandardMaterial({ color: CONFIG.colors.darkBeige, metalness: 0.6, roughness: 0.4 });
+
+                // Enhanced Base with Details
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 0.5, 8), matBody);
+                base.position.y = 0.25;
+                base.castShadow = true;
+                this.group.add(base);
+
+                // Base Ring Detail
+                const baseRing = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.08, 8, 16), matAccent);
+                baseRing.position.y = 0.4;
+                baseRing.rotation.x = Math.PI / 2;
+                this.group.add(baseRing);
+
+                // Rotating Base Platform
+                const basePlatform = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.15, 8), matJoint);
+                basePlatform.position.y = 0.55;
+                this.group.add(basePlatform);
+
+                const segments = this.type === 'precision' ? 3 : 2;
+                let currentY = 0.6;
+                let currentGroup = this.group;
+
+                for (let i = 0; i < segments; i++) {
+                    const jointGroup = new THREE.Group();
+
+                    // Enhanced Joint with Housing
+                    const jointHousing = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.5), matBody);
+                    jointGroup.add(jointHousing);
+
+                    const joint = new THREE.Mesh(new THREE.SphereGeometry(0.3), matJoint);
+                    jointGroup.add(joint);
+
+                    // Pistons/Hydraulics
+                    const piston = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8), matAccent);
+                    piston.position.set(0.25, 0.3, 0);
+                    piston.rotation.z = -Math.PI / 6;
+                    jointGroup.add(piston);
+                    this.pistons.push(piston);
+
+                    // Arm Segment with Detail
+                    const len = 1.5;
+                    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, len, 8), matBody);
+                    seg.position.y = len / 2;
+                    seg.castShadow = true;
+                    jointGroup.add(seg);
+
+                    // Cable Conduit
+                    const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, len, 6), matAccent);
+                    cable.position.set(-0.18, len / 2, 0);
+                    jointGroup.add(cable);
+
+                    // Accent Rings on Segment
+                    for (let r = 0; r < 2; r++) {
+                        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 12), matAccent);
+                        ring.position.y = (r + 0.5) * len / 2;
+                        ring.rotation.x = Math.PI / 2;
+                        jointGroup.add(ring);
+                    }
+
+                    jointGroup.position.y = currentY;
+                    currentGroup.add(jointGroup);
+                    this.joints.push(jointGroup);
+
+                    currentY = len;
+                    currentGroup = jointGroup;
+                }
+
+                // Enhanced End Effector / Gripper with Scanner
+                const effectorBase = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.5), matBody);
+                effectorBase.position.y = 0.15;
+                this.joints[this.joints.length - 1].add(effectorBase);
+
+                // Scanner Beam (invisible by default)
+                const beamGeo = new THREE.CylinderGeometry(0.02, 0.02, 3, 8);
+                const beamMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
+                this.scanBeam = new THREE.Mesh(beamGeo, beamMat);
+                this.scanBeam.position.set(0, 1.5, 0);
+                this.joints[this.joints.length - 1].add(this.scanBeam);
+
+                // Gripper Fingers
+                const fingerGeo = new THREE.BoxGeometry(0.08, 0.4, 0.15);
+                [-0.15, 0.15].forEach(x => {
+                    const finger = new THREE.Mesh(fingerGeo, matJoint);
+                    finger.position.set(x, 0.1, 0.25);
+                    this.joints[this.joints.length - 1].add(finger);
+
+                    // Finger detail
+                    const fingerTip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.08), matAccent);
+                    fingerTip.position.set(0, -0.15, 0.05);
+                    finger.add(fingerTip);
+                });
+
+                // Tool Mount
+                const toolMount = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.2, 8), matAccent);
+                toolMount.position.set(0, 0.05, 0.25);
+                this.joints[this.joints.length - 1].add(toolMount);
+            }
+
+            performScan(targetPackage = null) {
+                if (this.isScanning) return;
+
+                this.isScanning = true;
+                this.scanTimer = 0;
+                this.scanTarget = targetPackage;
+
+                // Point scanner at package if target exists
+                if (targetPackage && targetPackage.mesh) {
+                    const gripperWorldPos = this.joints[this.joints.length - 1].getWorldPosition(new THREE.Vector3());
+                    const targetPos = targetPackage.mesh.position.clone();
+                    const direction = targetPos.sub(gripperWorldPos).normalize();
+                    
+                    // Orient scan beam towards package
+                    this.scanBeam.lookAt(targetPos);
+                    this.scanBeam.rotation.x += Math.PI / 2; // Adjust for cylinder orientation
+                }
+
+                // Show scan beam
+                this.scanBeam.material.opacity = 0.8;
+                this.scanBeam.scale.y = 0.1;
+
+                // Play scan sound
+                playTone(800, 'sawtooth', 0.3, 0.03);
+
+                // Animate scan
+                const scanAnimation = () => {
+                    this.scanTimer += 0.02;
+                    const progress = Math.min(this.scanTimer / 1.0, 1);
+
+                    // Update beam direction if tracking package
+                    if (this.scanTarget && this.scanTarget.mesh && this.scanTarget.active) {
+                        const gripperWorldPos = this.joints[this.joints.length - 1].getWorldPosition(new THREE.Vector3());
+                        const targetPos = this.scanTarget.mesh.position.clone();
+                        this.scanBeam.lookAt(targetPos);
+                        this.scanBeam.rotation.x += Math.PI / 2;
+                    }
+
+                    this.scanBeam.scale.y = progress * 3;
+                    this.scanBeam.material.opacity = 0.8 * (1 - progress);
+
+                    if (progress < 1) {
+                        requestAnimationFrame(scanAnimation);
+                    } else {
+                        this.isScanning = false;
+                        this.scanBeam.material.opacity = 0;
+                        this.scanTarget = null;
+                        playTone(1200, 'sine', 0.1, 0.02);
+                    }
+                };
+                scanAnimation();
+            }
+
+            pickPackage(pkg) {
+                if (!pkg || this.targetPackage) return;
+
+                this.targetPackage = pkg;
+                // Animate arm towards package
+                const armTarget = pkg.mesh.position.clone();
+                armTarget.y += 1;
+
+                // Simple animation towards target
+                this.animateTowards(armTarget);
+            }
+
+            animateTowards(target) {
+                // Simplified animation - in real implementation would use proper IK
+                const currentPos = this.joints[this.joints.length - 1].getWorldPosition(new THREE.Vector3());
+                const direction = target.clone().sub(currentPos).normalize();
+
+                // Move joints towards target
+                this.joints.forEach((joint, i) => {
+                    const offset = direction.clone().multiplyScalar(0.1 * (i + 1));
+                    joint.rotation.x += offset.x * 0.5;
+                    joint.rotation.z += offset.z * 0.5;
+                });
+            }
+
+            animate(dt) {
+                this.timer += dt;
+                const t = this.timer;
+
+                // Find nearest package on belt to scan
+                let nearestPackage = null;
+                let nearestDist = Infinity;
+                const robotPos = this.group.position;
+
+                packages.forEach(pkg => {
+                    if (pkg.active && pkg.mesh.visible) {
+                        const dist = robotPos.distanceTo(pkg.mesh.position);
+                        // Check if package is within scanning range (15 units)
+                        if (dist < 15 && dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestPackage = pkg;
+                        }
+                    }
+                });
+
+                // Rotate robot base to face nearest package
+                if (nearestPackage && !this.isScanning) {
+                    const direction = nearestPackage.mesh.position.clone().sub(robotPos);
+                    const targetAngle = Math.atan2(direction.x, direction.z);
+                    this.group.rotation.y = THREE.MathUtils.lerp(this.group.rotation.y, targetAngle, 0.05);
+                } else {
+                    this.group.rotation.y = Math.sin(t * 0.3) * 0.2;
+                }
+
+                // Scan nearest package
+                if (nearestPackage && !this.isScanning && Math.random() < 0.01) { // 1% chance per frame
+                    this.performScan(nearestPackage);
+                }
+
+                // Random arm movements (less when scanning)
+                const movementIntensity = this.isScanning ? 0.05 : 0.2;
+                this.joints.forEach((j, i) => {
+                    j.rotation.z = Math.sin(t + i) * movementIntensity + Math.sin(t * 0.7 + i * 2) * (movementIntensity * 0.5);
+                    j.rotation.x = Math.cos(t * 0.5 + i) * (movementIntensity * 0.5);
+                });
+
+                // Animate pistons
+                this.pistons.forEach((p, i) => {
+                    const scale = 1 + Math.sin(t * 0.5 + i) * 0.15;
+                    p.scale.y = scale;
+                });
+
+                // If holding package, move it with gripper
+                if (this.targetPackage) {
+                    const gripperPos = this.joints[this.joints.length - 1].getWorldPosition(new THREE.Vector3());
+                    this.targetPackage.mesh.position.copy(gripperPos);
+                    this.targetPackage.mesh.position.y -= 0.5;
+                }
+            }
+        }
+
+        // --- Inspection Station ---
+        class InspectionStation {
+            constructor(position, isLabelingStation = false) {
+                this.group = new THREE.Group();
+                this.isLabelingStation = isLabelingStation;
+
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+
+                [-1.5, 1.5].forEach(x => {
+                    const post = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4, 0.2), frameMat);
+                    post.position.set(x, 2, 0);
+                    post.castShadow = true;
+                    this.group.add(post);
+                });
+
+                const beam = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.2, 0.3), frameMat);
+                beam.position.y = 4;
+                this.group.add(beam);
+
+                // Scanner Lights
+                this.lights = [];
+                const lightColor = isLabelingStation ? 0x00ff00 : CONFIG.colors.gold;
+                for (let i = 0; i < 3; i++) {
+                    const l = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.3), new THREE.MeshStandardMaterial({ color: lightColor, emissive: lightColor }));
+                    l.position.set(-1 + i, 3.7, 0);
+                    this.group.add(l);
+                    this.lights.push(l);
+                }
+
+                // Rotate to face the belt (90 degrees)
+                this.group.rotation.y = Math.PI / 2;
+                this.group.position.copy(position);
+                scene.add(this.group);
+            }
+
+            animate(t) {
+                this.lights.forEach((l, i) => {
+                    l.material.emissiveIntensity = 0.5 + Math.sin(t * 3 + i) * 0.5;
+                });
+            }
+        }
+
+        // --- Forklift ---
+        class Forklift {
+            constructor(position) {
+                this.group = new THREE.Group();
+
+                const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 1.5), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+                body.position.y = 0.8;
+                body.castShadow = true;
+                this.group.add(body);
+
+                const cabin = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 1.4), new THREE.MeshStandardMaterial({ color: CONFIG.colors.darkBeige }));
+                cabin.position.set(-0.3, 1.5, 0);
+                this.group.add(cabin);
+
+                const mast = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3, 0.15), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+                mast.position.set(0.8, 1.5, 0);
+                this.group.add(mast);
+
+                // Forks
+                [-0.3, 0.3].forEach(z => {
+                    const fork = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.1), new THREE.MeshStandardMaterial({ color: 0x888888 }));
+                    fork.position.set(1.4, 0.4, z);
+                    this.group.add(fork);
+                });
+
+                // Wheels
+                [-0.6, 0.6, -0.6, 0.6].forEach((z, i) => {
+                    const x = i < 2 ? 0.7 : -0.7;
+                    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.2, 12), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+                    wheel.rotation.z = Math.PI / 2;
+                    wheel.position.set(x, 0.25, z);
+                    this.group.add(wheel);
+                });
+
+                this.group.position.copy(position);
+                scene.add(this.group);
+            }
+        }
+
+        // --- Industrial Machinery ---
+        class IndustrialMachine {
+            constructor(position, type = 'processing') {
+                this.group = new THREE.Group();
+                const mat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.7, roughness: 0.3 });
+                const accentMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8, roughness: 0.2 });
+
+                // Main body
+                const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 2), mat);
+                body.position.y = 0.75;
+                body.castShadow = true;
+                this.group.add(body);
+
+                // Control panel
+                const panel = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 0.1), accentMat);
+                panel.position.set(0, 1.2, 1.05);
+                this.group.add(panel);
+
+                // Status lights
+                [-0.5, 0, 0.5].forEach(x => {
+                    const light = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.08, 8, 8),
+                        new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.8 })
+                    );
+                    light.position.set(x, 1.2, 1.1);
+                    this.group.add(light);
+                });
+
+                // Pipes/conduits
+                for (let i = 0; i < 3; i++) {
+                    const pipe = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.1, 0.1, 1, 8),
+                        accentMat
+                    );
+                    pipe.position.set(-0.8 + i * 0.8, 1.5, 0);
+                    pipe.rotation.z = Math.PI / 2;
+                    this.group.add(pipe);
+                }
+
+                this.group.position.copy(position);
+                scene.add(this.group);
+            }
+        }
+
+        // --- Energy Generator ---
+        class EnergyGenerator {
+            constructor(position) {
+                this.group = new THREE.Group();
+                const mat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8, roughness: 0.2 });
+                const glowMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.6 });
+
+                // Main generator body
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 2, 16), mat);
+                body.position.y = 1;
+                body.castShadow = true;
+                this.group.add(body);
+
+                // Top cap
+                const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.5, 0.3, 16), mat);
+                cap.position.y = 2.15;
+                this.group.add(cap);
+
+                // Energy core (glowing)
+                const core = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), glowMat);
+                core.position.y = 1;
+                this.group.add(core);
+
+                // Cooling fins
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const fin = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.1, 1.5, 0.3),
+                        mat
+                    );
+                    fin.position.set(
+                        Math.cos(angle) * 1.6,
+                        0.75,
+                        Math.sin(angle) * 1.6
+                    );
+                    fin.rotation.y = angle;
+                    this.group.add(fin);
+                }
+
+                // Power conduits
+                [-1, 1].forEach(x => {
+                    const conduit = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.15, 0.15, 0.8, 8),
+                        glowMat
+                    );
+                    conduit.position.set(x, 0.4, 0);
+                    conduit.rotation.z = Math.PI / 2;
+                    this.group.add(conduit);
+                });
+
+                // Base platform
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.2, 16), mat);
+                base.position.y = 0.1;
+                this.group.add(base);
+
+                this.group.position.copy(position);
+                scene.add(this.group);
+            }
+
+            animate(t) {
+                // Pulsing energy core
+                const core = this.group.children.find(c => c.geometry && c.geometry.type === 'SphereGeometry');
+                if (core) {
+                    const intensity = 0.4 + Math.sin(t * 3) * 0.2;
+                    core.material.emissiveIntensity = intensity;
+                }
+            }
+        }
+
+        // --- VOXEL Human Operator (Blocky Structure) ---
+        class HumanOperator {
+            constructor(position, variant = 0) {
+                this.group = new THREE.Group();
+                this.variant = variant;
+                this.timer = Math.random() * 100;
+                this.homePosition = position.clone();
+                this.currentTarget = position.clone();
+                this.moveSpeed = 0.1 + Math.random() * 0.1; // Much slower movement
+                this.idleTime = 0;
+                this.isMoving = false;
+
+                // Define movement area (5x5 unit area around home position)
+                this.moveBounds = {
+                    minX: position.x - 2.5,
+                    maxX: position.x + 2.5,
+                    minZ: position.z - 2.5,
+                    maxZ: position.z + 2.5
+                };
+
+                const skinColor = 0xffdbac;
+                const bodyColor = variant % 2 === 0 ? 0x2a2a2a : 0x1a1a1a;
+                const shirtColor = variant === 0 ? 0x444444 : (variant === 1 ? 0x333333 : 0x3a3a3a);
+                const voxelMat = { roughness: 0.9, metalness: 0.1 }; // Flat voxel material
+
+                // Voxel size unit (for consistent blockiness)
+                const voxelSize = 0.1;
+
+                // Torso (voxel blocks)
+                const torso = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 0.8, 0.35),
+                    new THREE.MeshStandardMaterial({ color: shirtColor, ...voxelMat })
+                );
+                torso.position.y = 1.3;
+                torso.castShadow = true;
+                this.group.add(torso);
+
+                // Shoulders (voxel blocks)
+                [-0.25, 0.25].forEach(x => {
+                    const shoulder = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.2, 0.2, 0.2),
+                        new THREE.MeshStandardMaterial({ color: shirtColor, ...voxelMat })
+                    );
+                    shoulder.position.set(x, 1.6, 0);
+                    this.group.add(shoulder);
+                });
+
+                // Safety Vest (voxel blocks)
+                const vestColor = variant === 0 ? 0xff8800 : (variant === 1 ? 0xffaa00 : 0x00aaff);
+                const vest = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.52, 0.65, 0.37),
+                    new THREE.MeshStandardMaterial({ color: vestColor, emissive: vestColor, emissiveIntensity: 0.15, ...voxelMat })
+                );
+                vest.position.y = 1.35;
+                this.group.add(vest);
+
+                // Reflective Strips on vest (voxel blocks)
+                [-0.2, 0, 0.2].forEach(y => {
+                    const strip = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.54, 0.05, 0.38),
+                        new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 0.6, ...voxelMat })
+                    );
+                    strip.position.y = 1.35 + y;
+                    this.group.add(strip);
+                });
+
+                // Waist/Belt (voxel block)
+                const belt = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.48, 0.15, 0.33),
+                    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, ...voxelMat })
+                );
+                belt.position.y = 0.95;
+                this.group.add(belt);
+
+                // Head (voxel cube)
+                const head = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.4, 0.4, 0.4),
+                    new THREE.MeshStandardMaterial({ color: skinColor, ...voxelMat })
+                );
+                head.position.y = 2.05;
+                head.castShadow = true;
+                this.group.add(head);
+
+                // Eyes (voxel blocks)
+                [-0.1, 0.1].forEach(x => {
+                    const eye = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.06, 0.06, 0.06),
+                        new THREE.MeshStandardMaterial({ color: 0x000000, ...voxelMat })
+                    );
+                    eye.position.set(x, 2.08, 0.18);
+                    this.group.add(eye);
+                });
+
+                // Hard Hat (voxel blocks)
+                const hatColor = variant === 0 ? 0xffaa00 : (variant === 1 ? 0xff0000 : 0x0055ff);
+                const hatBase = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 0.15, 0.5),
+                    new THREE.MeshStandardMaterial({ color: hatColor, ...voxelMat })
+                );
+                hatBase.position.y = 2.22;
+                this.group.add(hatBase);
+
+                // Hat brim (voxel block)
+                const hatBrim = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.6, 0.05, 0.6),
+                    new THREE.MeshStandardMaterial({ color: hatColor, ...voxelMat })
+                );
+                hatBrim.position.y = 2.15;
+                this.group.add(hatBrim);
+
+                // Arms with shoulders, upper arm, forearm, and hands (all voxel blocks)
+                this.arms = [];
+                this.upperArms = [];
+                this.foreArms = [];
+                this.hands = [];
+                
+                [-0.35, 0.35].forEach((x, i) => {
+                    // Upper arm (voxel block)
+                    const upperArm = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.2, 0.4, 0.2),
+                        new THREE.MeshStandardMaterial({ color: shirtColor, ...voxelMat })
+                    );
+                    upperArm.position.set(x, 1.4, 0);
+                    upperArm.rotation.z = x < 0 ? 0.4 : -0.4;
+                    this.group.add(upperArm);
+                    this.upperArms.push(upperArm);
+
+                    // Forearm (voxel block)
+                    const foreArm = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.18, 0.4, 0.18),
+                        new THREE.MeshStandardMaterial({ color: skinColor, ...voxelMat })
+                    );
+                    foreArm.position.set(x, 1.0, 0);
+                    foreArm.rotation.z = x < 0 ? 0.6 : -0.6;
+                    this.group.add(foreArm);
+                    this.foreArms.push(foreArm);
+
+                    // Hand (voxel block)
+                    const hand = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.15, 0.12, 0.15),
+                        new THREE.MeshStandardMaterial({ color: skinColor, ...voxelMat })
+                    );
+                    hand.position.set(x, 0.75, 0);
+                    hand.rotation.z = x < 0 ? 0.8 : -0.8;
+                    this.group.add(hand);
+                    this.hands.push(hand);
+
+                    this.arms.push(upperArm); // Keep for animation
+                });
+
+                // Legs with thighs, shins, and feet (all voxel blocks)
+                this.legs = [];
+                this.thighs = [];
+                this.shins = [];
+                this.feet = [];
+                
+                [-0.12, 0.12].forEach((x, i) => {
+                    // Thigh (voxel block)
+                    const thigh = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.25, 0.5, 0.25),
+                        new THREE.MeshStandardMaterial({ color: bodyColor, ...voxelMat })
+                    );
+                    thigh.position.set(x, 0.7, 0);
+                    this.group.add(thigh);
+                    this.thighs.push(thigh);
+
+                    // Shin (voxel block)
+                    const shin = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.22, 0.45, 0.22),
+                        new THREE.MeshStandardMaterial({ color: bodyColor, ...voxelMat })
+                    );
+                    shin.position.set(x, 0.2, 0);
+                    this.group.add(shin);
+                    this.shins.push(shin);
+
+                    // Foot (voxel block)
+                    const foot = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.2, 0.1, 0.3),
+                        new THREE.MeshStandardMaterial({ color: 0x1a1a1a, ...voxelMat })
+                    );
+                    foot.position.set(x, 0.04, 0.1);
+                    foot.castShadow = true;
+                    this.group.add(foot);
+                    this.feet.push(foot);
+
+                    this.legs.push(thigh); // Keep for animation
+                });
+
+                this.group.position.copy(position);
+                scene.add(this.group);
+            }
+
+            pickRandomTarget() {
+                // Pick random position within designated area
+                const targetX = this.moveBounds.minX + Math.random() * (this.moveBounds.maxX - this.moveBounds.minX);
+                const targetZ = this.moveBounds.minZ + Math.random() * (this.moveBounds.maxZ - this.moveBounds.minZ);
+                this.currentTarget.set(targetX, 0, targetZ);
+                this.isMoving = true;
+                this.idleTime = 0;
+            }
+
+            animate(dt) {
+                this.timer += dt;
+                const t = this.timer;
+
+                // Find nearest package to look at
+                let nearestPackage = null;
+                let nearestDist = Infinity;
+                const operatorPos = this.group.position;
+
+                packages.forEach(pkg => {
+                    if (pkg.active && pkg.mesh.visible) {
+                        const dist = operatorPos.distanceTo(pkg.mesh.position);
+                        // Check if package is within viewing range (20 units)
+                        if (dist < 20 && dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestPackage = pkg;
+                        }
+                    }
+                });
+
+                // Only move when there's a package nearby
+                if (nearestPackage) {
+                    // Look at the package
+                    const lookDirection = nearestPackage.mesh.position.clone().sub(operatorPos);
+                    const targetAngle = Math.atan2(lookDirection.x, lookDirection.z);
+                    this.group.rotation.y = THREE.MathUtils.lerp(this.group.rotation.y, targetAngle, 0.05);
+
+                    // Only move slowly if package is far away (more than 5 units)
+                    if (nearestDist > 5) {
+                        // Move slowly toward package
+                        const moveDirection = lookDirection.normalize();
+                        this.group.position.add(moveDirection.multiplyScalar(this.moveSpeed * dt * 0.5)); // Even slower
+
+                        // Subtle walking animation
+                        const walkCycle = Math.sin(t * 4) * 0.1; // Slower animation
+                        const armSwing = Math.sin(t * 4) * 0.15;
+                        
+                        // Animate legs (thighs and shins) - subtle
+                        this.thighs.forEach((thigh, i) => {
+                            thigh.rotation.x = walkCycle * (i === 0 ? 1 : -1);
+                        });
+                        this.shins.forEach((shin, i) => {
+                            shin.rotation.x = walkCycle * 0.3 * (i === 0 ? 1 : -1);
+                        });
+                        
+                        // Animate arms (upper arms and forearms) - subtle
+                        this.upperArms.forEach((upperArm, i) => {
+                            upperArm.rotation.z = (i === 0 ? 0.4 : -0.4) + armSwing * (i === 0 ? -1 : 1) * 0.2;
+                        });
+                        this.foreArms.forEach((foreArm, i) => {
+                            foreArm.rotation.z = (i === 0 ? 0.6 : -0.6) + armSwing * (i === 0 ? -1 : 1) * 0.15;
+                        });
+                    } else {
+                        // Close enough - just look at package, no movement
+                        // Reset leg/arm positions to idle
+                        this.thighs.forEach(thigh => thigh.rotation.x = 0);
+                        this.shins.forEach(shin => shin.rotation.x = 0);
+                        this.upperArms.forEach((upperArm, i) => upperArm.rotation.z = i === 0 ? 0.4 : -0.4);
+                        this.foreArms.forEach((foreArm, i) => foreArm.rotation.z = i === 0 ? 0.6 : -0.6);
+                    }
+                } else {
+                    // No packages nearby - stay in place, no movement
+                    this.isMoving = false;
+                    
+                    // Reset leg/arm positions
+                    this.thighs.forEach(thigh => thigh.rotation.x = 0);
+                    this.shins.forEach(shin => shin.rotation.x = 0);
+                    this.upperArms.forEach((upperArm, i) => upperArm.rotation.z = i === 0 ? 0.4 : -0.4);
+                    this.foreArms.forEach((foreArm, i) => foreArm.rotation.z = i === 0 ? 0.6 : -0.6);
+                    
+                    // Very subtle idle rotation
+                    this.group.rotation.y = Math.sin(t * 0.1) * 0.05;
+                }
+            }
+        }
+
+        // --- Package - FIXED POSITIONING with VARYING SIZES ---
+        class Package {
+            constructor() {
+                // Varying sizes but all fit on belt (width = 2 units)
+                const sizeVariations = [
+                    { w: 0.6, h: 0.5, d: 0.6 }, // Small
+                    { w: 0.8, h: 0.6, d: 0.8 }, // Medium
+                    { w: 1.0, h: 0.7, d: 1.0 }, // Large
+                    { w: 0.7, h: 0.8, d: 0.7 }, // Tall
+                    { w: 0.9, h: 0.5, d: 0.9 }  // Wide but short
+                ];
+                const size = sizeVariations[Math.floor(Math.random() * sizeVariations.length)];
+                
+                this.mesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(size.w, size.h, size.d),
+                    new THREE.MeshStandardMaterial({
+                        color: CONFIG.colors.beige,
+                        emissive: 0xffaa00,
+                        emissiveIntensity: 0.4,
+                        roughness: 0.2
+                    })
+                );
+                this.mesh.castShadow = true;
+                this.mesh.receiveShadow = true;
+
+                this.light = new THREE.PointLight(0xffaa00, 0.5, 5);
+                this.mesh.add(this.light);
+
+                // Label (initially empty, will be added at labeling station)
+                this.label = null;
+                this.labelText = null;
+                this.hasLabel = false;
+
+                this.progress = 0;
+                this.active = false;
+                this.hasBeenReceived = false;
+                this.hasBeenShipped = false;
+
+                scene.add(this.mesh);
+                this.reset();
+            }
+
+            addLabel(text) {
+                if (this.hasLabel) return; // Already labeled
+
+                // Create label texture
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                
+                // Background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 128, 64);
+                
+                // Border
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(2, 2, 124, 60);
+                
+                // Text
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, 64, 32);
+
+                const labelTexture = new THREE.CanvasTexture(canvas);
+                const labelMat = new THREE.MeshStandardMaterial({ map: labelTexture });
+                const labelGeo = new THREE.PlaneGeometry(0.3, 0.15);
+                this.label = new THREE.Mesh(labelGeo, labelMat);
+                this.label.position.set(0, this.mesh.geometry.parameters.height / 2 + 0.1, this.mesh.geometry.parameters.depth / 2 + 0.01);
+                this.label.lookAt(this.label.position.clone().add(new THREE.Vector3(0, 0, 1)));
+                this.mesh.add(this.label);
+                
+                this.labelText = text;
+                this.hasLabel = true;
+            }
+
+            reset() {
+                this.progress = 0;
+                this.active = true;
+                this.hasBeenReceived = false;
+                this.hasBeenShipped = false;
+                this.mesh.visible = true;
+                this.mesh.material.opacity = 0;
+                this.mesh.material.transparent = true;
+                
+                // Remove label if it exists
+                if (this.label) {
+                    this.mesh.remove(this.label);
+                    this.label = null;
+                    this.labelText = null;
+                    this.hasLabel = false;
+                }
+            }
+
+            update(dt) {
+                if (!this.active) return;
+
+                this.progress += dt * 0.0015;
+
+                // Fade In/Out Logic
+                if (this.progress < 0.08) {
+                    this.mesh.material.opacity = this.progress / 0.08;
+                    if (!this.hasBeenReceived && this.progress > 0.04) {
+                        this.hasBeenReceived = true;
+                        state.receivedCount++;
+                        document.getElementById('received-val').innerText = state.receivedCount;
+                        playTone(440, 'sine', 0.1);
+                    }
+                } else if (this.progress > 0.92) {
+                    this.mesh.material.opacity = (1 - this.progress) / 0.08;
+                    if (!this.hasBeenShipped && this.progress > 0.96) {
+                        this.hasBeenShipped = true;
+                        state.shippedCount++;
+                        document.getElementById('shipped-val').innerText = state.shippedCount;
+                        playTone(880, 'sine', 0.1);
+                    }
+                } else {
+                    this.mesh.material.opacity = 1;
+                }
+
+                if (this.progress >= 1) {
+                    this.active = false;
+                    this.mesh.visible = false;
+                    return;
+                }
+
+                // FIXED: Package position - all segments use rug conveyor at ground level
+                // Path Logic: Entry(-35,-20) -> Bottom -> Right -> Top -> Exit(-35, 20)
+                const totalDist = 170;
+                const currentDist = this.progress * totalDist;
+
+                // All packages sit at y=0.2 on rug conveyors (adjusted for package height)
+                const packageY = 0.2 + (this.mesh.geometry.parameters.height / 2);
+
+                if (currentDist < 65) {
+                    // Bottom: (-35, -20) to (30, -20) - Rug conveyor (entry)
+                    this.mesh.position.set(-35 + currentDist, packageY, -20);
+                } else if (currentDist < 105) {
+                    // Right: (30, -20) to (30, 20) - Rug conveyor (ground level)
+                    this.mesh.position.set(30, packageY, -20 + (currentDist - 65));
+                } else {
+                    // Top: (30, 20) to (-35, 20) - Rug conveyor (ground level, near exit)
+                    this.mesh.position.set(30 - (currentDist - 105), packageY, 20);
+                    
+                    // Label package when it approaches exit door (around progress 0.9-0.95)
+                    if (!this.hasLabel && currentDist > 155 && currentDist < 165) {
+                        const labelId = Math.floor(Math.random() * 10000);
+                        this.addLabel(`PKG-${labelId.toString().padStart(5, '0')}`);
+                        playTone(600, 'sine', 0.15, 0.02);
+                    }
+                }
+
+                // Smooth rotation aligned with conveyor movement
+                this.mesh.rotation.y += dt * 0.5;
+                this.mesh.rotation.x = Math.sin(this.progress * Math.PI * 4) * 0.05;
+            }
+        }
+
+        // ============================================
+        // SCENE POPULATION
+        // ============================================
+
+        // Conveyor Segments - FIXED positioning
+        const convPoints = [
+            new THREE.Vector3(-35, 0, -20),
+            new THREE.Vector3(30, 0, -20),
+            new THREE.Vector3(30, 0, 20),
+            new THREE.Vector3(-35, 0, 20)
+        ];
+        const segments = [];
+        for (let i = 0; i < convPoints.length - 1; i++) {
+            // All segments now use rug conveyor that sits on ground
+            segments.push(new ConveyorRug(convPoints[i], convPoints[i + 1]));
+        }
+
+        // Doors
+        const entryDoor = new Door(new THREE.Vector3(-35, 0, -20), 'entry');
+        const exitDoor = new Door(new THREE.Vector3(-35, 0, 20), 'exit');
+        const doors = [entryDoor, exitDoor];
+
+        // Production Machine inside IN gate (behind the door, producing packages)
+        const productionMachine = new ProductionMachine(new THREE.Vector3(-35, 0, -25));
+        entryDoor.productionMachine = productionMachine;
+
+        // Packages - Initialize first so robots can access them
+        const packages = [];
+        for (let i = 0; i < 15; i++) {
+            const p = new Package();
+            p.progress = i * 0.05;
+            p.active = true;
+            packages.push(p);
+        }
+
+        // Enhanced Robots with functionality
+        const robots = [
+            new RobotArm(new THREE.Vector3(-20, 0, -22), 'precision'),
+            new RobotArm(new THREE.Vector3(0, 0, -22), 'mid-range'),
+            new RobotArm(new THREE.Vector3(20, 0, -22), 'precision'),
+            new RobotArm(new THREE.Vector3(32, 0, 0), 'loading'),
+            new RobotArm(new THREE.Vector3(20, 0, 22), 'mid-range'),
+            new RobotArm(new THREE.Vector3(-10, 0, 22), 'loading')
+        ];
+
+        // Inspection stations removed - only IN/OUT doors remain
+
+        // Industrial Machinery in empty spaces
+        const machines = [
+            new IndustrialMachine(new THREE.Vector3(5, 0, 0)),
+            new IndustrialMachine(new THREE.Vector3(-5, 0, 0)),
+            new IndustrialMachine(new THREE.Vector3(0, 0, 5)),
+            new IndustrialMachine(new THREE.Vector3(0, 0, -5)),
+            new IndustrialMachine(new THREE.Vector3(15, 0, 5))
+        ];
+
+        // Energy Generator
+        const energyGenerator = new EnergyGenerator(new THREE.Vector3(-10, 0, 0));
+
+        // Multiple Forklifts in the warehouse
+        const forklifts = [
+            new Forklift(new THREE.Vector3(-25, 0, 15)),
+            new Forklift(new THREE.Vector3(15, 0, -15)),
+            new Forklift(new THREE.Vector3(-15, 0, -10)),
+            new Forklift(new THREE.Vector3(25, 0, 10))
+        ];
+
+        const operators = [
+            new HumanOperator(new THREE.Vector3(-15, 0, -25), 0),
+            new HumanOperator(new THREE.Vector3(28, 0, 25), 1),
+            new HumanOperator(new THREE.Vector3(-30, 0, -10), 2),
+            new HumanOperator(new THREE.Vector3(10, 0, 25), 0)
+        ];
+
+        // ============================================
+        // INTERACTION & LOOP - FIXED MOUSE CONTROLS
+        // ============================================
+
+        // Camera Controls - IMPROVED: Smooth and intuitive mouse controls
+        let isDragging = false;
+        let prevMouse = { x: 0, y: 0 };
+        let camAngle = { theta: Math.PI / 4, phi: Math.PI / 3 }; // Start at better angle
+        let camRadius = 80;
+        const mouseSensitivity = 0.003; // Smooth sensitivity
+
+        document.addEventListener('mousedown', e => {
+            if (e.target.closest('button') || e.target.closest('input')) return;
+            isDragging = true;
+            prevMouse = { x: e.clientX, y: e.clientY };
+            e.preventDefault(); // Prevent text selection
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (isDragging) {
+                const dx = e.clientX - prevMouse.x;
+                const dy = e.clientY - prevMouse.y;
+
+                // Intuitive controls - match mouse movement direction:
+                // Drag right = rotate camera right (increase theta)
+                // Drag left = rotate camera left (decrease theta)
+                // Drag up = look up (decrease phi)
+                // Drag down = look down (increase phi)
+                camAngle.theta += dx * mouseSensitivity;
+                camAngle.phi += dy * mouseSensitivity; // Positive dy = look down
+                
+                // Clamp phi to prevent flipping
+                camAngle.phi = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, camAngle.phi));
+
+                prevMouse = { x: e.clientX, y: e.clientY };
+                updateCamera();
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        document.addEventListener('mouseleave', () => {
+            isDragging = false; // Stop dragging if mouse leaves window
+        });
+
+        document.addEventListener('wheel', e => {
+            // Intuitive zoom: scroll down = zoom in (decrease radius), scroll up = zoom out (increase radius)
+            camRadius -= e.deltaY * 0.15; // Negative deltaY for zoom in
+            camRadius = Math.max(20, Math.min(150, camRadius));
+            updateCamera();
+            e.preventDefault();
+        });
+
+        function updateCamera() {
+            // Spherical to Cartesian conversion
+            camera.position.x = camRadius * Math.sin(camAngle.phi) * Math.sin(camAngle.theta);
+            camera.position.y = camRadius * Math.cos(camAngle.phi);
+            camera.position.z = camRadius * Math.sin(camAngle.phi) * Math.cos(camAngle.theta);
+            camera.lookAt(0, 0, 0);
+        }
+        updateCamera();
+
+        // UI Controls
+        document.getElementById('play-btn').addEventListener('click', () => {
+            state.isPlaying = !state.isPlaying;
+            document.getElementById('play-btn').innerText = state.isPlaying ? '⏸' : '▶';
+            showNarration(state.isPlaying ? "SYSTEM RESUMED" : "SYSTEM PAUSED");
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            camAngle = { theta: Math.PI / 4, phi: Math.PI / 4 };
+            camRadius = 80;
+            updateCamera();
+            showNarration("CAMERA RESET");
+        });
+
+        document.getElementById('reset-packages-btn').addEventListener('click', () => {
+            // Reset all packages to start from beginning
+            packages.forEach((pkg, i) => {
+                pkg.reset();
+                pkg.progress = i * 0.05;
+                pkg.active = true;
+            });
+            // Reset counters
+            state.receivedCount = 0;
+            state.shippedCount = 0;
+            document.getElementById('received-val').innerText = '0';
+            document.getElementById('shipped-val').innerText = '0';
+            showNarration("PACKAGES RESET");
+            playTone(600, 'sine', 0.2, 0.05);
+        });
+
+        document.getElementById('sound-btn').addEventListener('click', () => {
+            state.soundEnabled = !state.soundEnabled;
+            document.getElementById('sound-btn').innerText = state.soundEnabled ? '🔊' : '🔇';
+            document.getElementById('sound-btn').style.opacity = state.soundEnabled ? '1' : '0.5';
+
+            if (state.soundEnabled) {
+                initAudio();
+                startAmbient();
+            } else {
+                stopAmbient();
+                speechSynthesis.cancel(); // Stop any ongoing speech
+            }
+
+            showNarration(state.soundEnabled ? "AUDIO ENABLED" : "AUDIO MUTED");
+        });
+
+        document.getElementById('speed-slider').addEventListener('input', (e) => {
+            CONFIG.speed = e.target.value / 100;
+        });
+
+        const infoToggle = document.getElementById('info-toggle');
+        const infoPanel = document.getElementById('info-panel');
+        infoToggle.addEventListener('click', () => {
+            infoPanel.classList.toggle('active');
+            infoToggle.style.background = infoPanel.classList.contains('active') ? '#D4C5A0' : 'rgba(0,0,0,0.5)';
+            infoToggle.style.color = infoPanel.classList.contains('active') ? '#000' : '#D4C5A0';
+        });
+
+        // Loop
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = clock.getDelta() * CONFIG.speed;
+
+            if (state.isPlaying) {
+                state.time += dt;
+
+                segments.forEach(s => s.animate(dt));
+                doors.forEach(d => d.animate(state.time));
+                robots.forEach(r => r.animate(dt));
+                operators.forEach(o => o.animate(dt));
+                energyGenerator.animate(state.time);
+                if (productionMachine) productionMachine.animate(state.time);
+
+                packages.forEach(p => {
+                    p.update(dt * 100);
+                    if (!p.active) {
+                        p.reset();
+                    }
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Init
+        window.addEventListener('load', () => {
+            // Preload voices for better quality
+            if ('speechSynthesis' in window) {
+                speechSynthesis.getVoices();
+            }
+
+            setTimeout(() => {
+                document.getElementById('loader').style.opacity = 0;
+                setTimeout(() => document.getElementById('loader').style.display = 'none', 1000);
+                showNarration("ENHANCED SYSTEM ONLINE");
+                scheduleNarration();
+            }, 1000);
+            animate();
+        });
+
+        // Ensure voices are loaded
+        if ('speechSynthesis' in window) {
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                speechSynthesis.getVoices();
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+
+</html>
