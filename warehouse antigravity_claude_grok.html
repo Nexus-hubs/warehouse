@@ -1088,12 +1088,36 @@
                 effectorBase.position.y = 0.15;
                 this.joints[this.joints.length - 1].add(effectorBase);
 
-                // Scanner Beam (invisible by default)
-                const beamGeo = new THREE.CylinderGeometry(0.02, 0.02, 3, 8);
-                const beamMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
+                // Scanner Beam (invisible by default) - Enhanced with glow
+                const beamGeo = new THREE.CylinderGeometry(0.03, 0.01, 3, 8);
+                const beamMat = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0,
+                    emissive: 0x00ff00,
+                    emissiveIntensity: 1
+                });
                 this.scanBeam = new THREE.Mesh(beamGeo, beamMat);
                 this.scanBeam.position.set(0, 1.5, 0);
                 this.joints[this.joints.length - 1].add(this.scanBeam);
+
+                // Add outer glow beam for better visibility
+                const glowBeamGeo = new THREE.CylinderGeometry(0.06, 0.02, 3, 8);
+                const glowBeamMat = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0,
+                    emissive: 0x00ff00,
+                    emissiveIntensity: 0.5
+                });
+                this.scanBeamGlow = new THREE.Mesh(glowBeamGeo, glowBeamMat);
+                this.scanBeamGlow.position.set(0, 1.5, 0);
+                this.joints[this.joints.length - 1].add(this.scanBeamGlow);
+
+                // Add scan point light
+                this.scanLight = new THREE.PointLight(0x00ff00, 0, 10);
+                this.scanLight.position.set(0, 1.5, 0);
+                this.joints[this.joints.length - 1].add(this.scanLight);
 
                 // Gripper Fingers
                 const fingerGeo = new THREE.BoxGeometry(0.08, 0.4, 0.15);
@@ -1121,45 +1145,84 @@
                 this.scanTimer = 0;
                 this.scanTarget = targetPackage;
 
-                // Point scanner at package if target exists
-                if (targetPackage && targetPackage.mesh) {
-                    const gripperWorldPos = this.joints[this.joints.length - 1].getWorldPosition(new THREE.Vector3());
-                    const targetPos = targetPackage.mesh.position.clone();
-                    const direction = targetPos.sub(gripperWorldPos).normalize();
-                    
-                    // Orient scan beam towards package
-                    this.scanBeam.lookAt(targetPos);
-                    this.scanBeam.rotation.x += Math.PI / 2; // Adjust for cylinder orientation
-                }
-
-                // Show scan beam
-                this.scanBeam.material.opacity = 0.8;
-                this.scanBeam.scale.y = 0.1;
+                // Show scan beam with enhanced visibility
+                this.scanBeam.material.opacity = 0.9;
+                this.scanBeamGlow.material.opacity = 0.3;
+                this.scanLight.intensity = 2;
 
                 // Play scan sound
                 playTone(800, 'sawtooth', 0.3, 0.03);
 
+                // Add glow to scanned package
+                if (targetPackage && targetPackage.mesh) {
+                    targetPackage.mesh.material.emissiveIntensity = 0.8;
+                }
+
                 // Animate scan
                 const scanAnimation = () => {
                     this.scanTimer += 0.02;
-                    const progress = Math.min(this.scanTimer / 1.0, 1);
+                    const progress = Math.min(this.scanTimer / 1.2, 1); // Slightly longer scan duration
 
-                    // Update beam direction if tracking package
+                    // Continuously update beam to point at package during entire scan
                     if (this.scanTarget && this.scanTarget.mesh && this.scanTarget.active) {
                         const gripperWorldPos = this.joints[this.joints.length - 1].getWorldPosition(new THREE.Vector3());
                         const targetPos = this.scanTarget.mesh.position.clone();
+
+                        // Calculate proper direction vector
+                        const direction = new THREE.Vector3().subVectors(targetPos, gripperWorldPos);
+                        const distance = direction.length();
+
+                        // Position scan beam to extend from gripper to package
+                        const beamMidpoint = new THREE.Vector3().addVectors(gripperWorldPos, direction.multiplyScalar(0.5));
+                        const localBeamPos = this.joints[this.joints.length - 1].worldToLocal(beamMidpoint.clone());
+                        this.scanBeam.position.copy(localBeamPos);
+                        this.scanBeamGlow.position.copy(localBeamPos);
+
+                        // Scale beams to reach package
+                        this.scanBeam.scale.y = distance / 3;
+                        this.scanBeamGlow.scale.y = distance / 3;
+
+                        // Orient beams toward package
                         this.scanBeam.lookAt(targetPos);
-                        this.scanBeam.rotation.x += Math.PI / 2;
+                        this.scanBeamGlow.lookAt(targetPos);
+
+                        // Move scan light to package position
+                        const localLightPos = this.joints[this.joints.length - 1].worldToLocal(targetPos.clone());
+                        this.scanLight.position.copy(localLightPos);
                     }
 
-                    this.scanBeam.scale.y = progress * 3;
-                    this.scanBeam.material.opacity = 0.8 * (1 - progress);
+                    // Pulsing opacity and intensity for scan effect
+                    const pulse = 1 + Math.sin(progress * Math.PI * 10) * 0.4;
+                    this.scanBeam.material.opacity = 0.9 * (1 - progress * 0.3) * pulse;
+                    this.scanBeamGlow.material.opacity = 0.4 * (1 - progress * 0.3) * pulse;
+                    this.scanLight.intensity = 2 * (1 - progress * 0.5) * pulse;
+
+                    // Pulse package emissive during scan
+                    if (this.scanTarget && this.scanTarget.mesh) {
+                        this.scanTarget.mesh.material.emissiveIntensity = 0.4 + pulse * 0.4;
+                    }
 
                     if (progress < 1) {
                         requestAnimationFrame(scanAnimation);
                     } else {
+                        // Scan complete
                         this.isScanning = false;
                         this.scanBeam.material.opacity = 0;
+                        this.scanBeamGlow.material.opacity = 0;
+                        this.scanLight.intensity = 0;
+                        this.scanBeam.scale.y = 0.1;
+                        this.scanBeamGlow.scale.y = 0.1;
+
+                        // Reset positions
+                        this.scanBeam.position.set(0, 1.5, 0);
+                        this.scanBeamGlow.position.set(0, 1.5, 0);
+                        this.scanLight.position.set(0, 1.5, 0);
+
+                        // Reset package emissive
+                        if (this.scanTarget && this.scanTarget.mesh) {
+                            this.scanTarget.mesh.material.emissiveIntensity = 0.4;
+                        }
+
                         this.scanTarget = null;
                         playTone(1200, 'sine', 0.1, 0.02);
                     }
@@ -1202,35 +1265,53 @@
                 const robotPos = this.group.position;
 
                 packages.forEach(pkg => {
-                    if (pkg.active && pkg.mesh.visible) {
+                    if (pkg.active && pkg.mesh.visible && pkg.mesh.material.opacity > 0.3) {
                         const dist = robotPos.distanceTo(pkg.mesh.position);
-                        // Check if package is within scanning range (15 units)
-                        if (dist < 15 && dist < nearestDist) {
+                        // Check if package is within scanning range (18 units - increased range)
+                        if (dist < 18 && dist < nearestDist) {
                             nearestDist = dist;
                             nearestPackage = pkg;
                         }
                     }
                 });
 
-                // Rotate robot base to face nearest package
+                // Rotate robot base to face nearest package (smoother tracking)
                 if (nearestPackage && !this.isScanning) {
                     const direction = nearestPackage.mesh.position.clone().sub(robotPos);
                     const targetAngle = Math.atan2(direction.x, direction.z);
-                    this.group.rotation.y = THREE.MathUtils.lerp(this.group.rotation.y, targetAngle, 0.05);
-                } else {
+                    this.group.rotation.y = THREE.MathUtils.lerp(this.group.rotation.y, targetAngle, 0.08);
+                } else if (!this.isScanning) {
+                    // Gentle idle rotation when no packages
                     this.group.rotation.y = Math.sin(t * 0.3) * 0.2;
                 }
 
-                // Scan nearest package
-                if (nearestPackage && !this.isScanning && Math.random() < 0.01) { // 1% chance per frame
-                    this.performScan(nearestPackage);
+                // Improved scanning logic - scan when package is in optimal range (5-12 units)
+                if (nearestPackage && !this.isScanning && nearestDist > 5 && nearestDist < 12) {
+                    // Much higher chance to scan when in optimal range
+                    if (Math.random() < 0.08) { // 8% chance per frame when in range
+                        this.performScan(nearestPackage);
+                    }
+                } else if (nearestPackage && !this.isScanning && nearestDist >= 12 && nearestDist < 18) {
+                    // Lower chance when farther away
+                    if (Math.random() < 0.03) { // 3% chance per frame
+                        this.performScan(nearestPackage);
+                    }
                 }
 
-                // Random arm movements (less when scanning)
-                const movementIntensity = this.isScanning ? 0.05 : 0.2;
+                // Purposeful arm movements toward packages (more when tracking, less when scanning)
+                const movementIntensity = this.isScanning ? 0.05 : (nearestPackage ? 0.25 : 0.15);
                 this.joints.forEach((j, i) => {
-                    j.rotation.z = Math.sin(t + i) * movementIntensity + Math.sin(t * 0.7 + i * 2) * (movementIntensity * 0.5);
-                    j.rotation.x = Math.cos(t * 0.5 + i) * (movementIntensity * 0.5);
+                    if (nearestPackage && !this.isScanning) {
+                        // Point arms toward package
+                        const direction = nearestPackage.mesh.position.clone().sub(robotPos);
+                        const angle = Math.atan2(direction.x, direction.z);
+                        j.rotation.z = Math.sin(t + i) * movementIntensity * 0.5 + angle * 0.1;
+                        j.rotation.x = Math.cos(t * 0.5 + i) * (movementIntensity * 0.3);
+                    } else {
+                        // Idle movement
+                        j.rotation.z = Math.sin(t + i) * movementIntensity + Math.sin(t * 0.7 + i * 2) * (movementIntensity * 0.5);
+                        j.rotation.x = Math.cos(t * 0.5 + i) * (movementIntensity * 0.5);
+                    }
                 });
 
                 // Animate pistons
@@ -1647,74 +1728,142 @@
                 this.timer += dt;
                 const t = this.timer;
 
-                // Find nearest package to look at
+                // Find nearest package to monitor
                 let nearestPackage = null;
                 let nearestDist = Infinity;
                 const operatorPos = this.group.position;
 
                 packages.forEach(pkg => {
-                    if (pkg.active && pkg.mesh.visible) {
+                    if (pkg.active && pkg.mesh.visible && pkg.mesh.material.opacity > 0.3) {
                         const dist = operatorPos.distanceTo(pkg.mesh.position);
-                        // Check if package is within viewing range (20 units)
-                        if (dist < 20 && dist < nearestDist) {
+                        // Check if package is within viewing range (25 units - slightly increased)
+                        if (dist < 25 && dist < nearestDist) {
                             nearestDist = dist;
                             nearestPackage = pkg;
                         }
                     }
                 });
 
+                // Smooth transition values for natural movement
+                const transitionSpeed = 0.08;
+
                 // Only move when there's a package nearby
                 if (nearestPackage) {
-                    // Look at the package
+                    // Smoothly look at the package
                     const lookDirection = nearestPackage.mesh.position.clone().sub(operatorPos);
                     const targetAngle = Math.atan2(lookDirection.x, lookDirection.z);
-                    this.group.rotation.y = THREE.MathUtils.lerp(this.group.rotation.y, targetAngle, 0.05);
+                    this.group.rotation.y = THREE.MathUtils.lerp(this.group.rotation.y, targetAngle, transitionSpeed);
 
-                    // Only move slowly if package is far away (more than 5 units)
-                    if (nearestDist > 5) {
-                        // Move slowly toward package
+                    // Move toward package if it's in range 8-15 units (optimal monitoring distance)
+                    if (nearestDist > 8 && nearestDist < 15) {
+                        this.isMoving = true;
+
+                        // Move toward package with natural speed variation
                         const moveDirection = lookDirection.normalize();
-                        this.group.position.add(moveDirection.multiplyScalar(this.moveSpeed * dt * 0.5)); // Even slower
+                        const speedVariation = 0.8 + Math.sin(t * 2) * 0.2; // Natural speed variation
+                        this.group.position.add(moveDirection.multiplyScalar(this.moveSpeed * dt * 0.6 * speedVariation));
 
-                        // Subtle walking animation
-                        const walkCycle = Math.sin(t * 4) * 0.1; // Slower animation
-                        const armSwing = Math.sin(t * 4) * 0.15;
-                        
-                        // Animate legs (thighs and shins) - subtle
+                        // Enhanced walking animation with natural bob
+                        const walkSpeed = 5; // Walk cycle speed
+                        const walkCycle = Math.sin(t * walkSpeed) * 0.15;
+                        const armSwing = Math.sin(t * walkSpeed) * 0.2;
+
+                        // Natural body bob during walking
+                        const bodyBob = Math.abs(Math.sin(t * walkSpeed)) * 0.08;
+                        this.group.children.forEach(child => {
+                            if (child !== this.thighs[0] && child !== this.thighs[1] &&
+                                child !== this.shins[0] && child !== this.shins[1] &&
+                                child !== this.feet[0] && child !== this.feet[1]) {
+                                child.position.y += bodyBob * 0.1;
+                            }
+                        });
+
+                        // Animate legs with natural walking motion
                         this.thighs.forEach((thigh, i) => {
-                            thigh.rotation.x = walkCycle * (i === 0 ? 1 : -1);
+                            const legPhase = i === 0 ? 1 : -1;
+                            thigh.rotation.x = THREE.MathUtils.lerp(thigh.rotation.x, walkCycle * legPhase, 0.2);
                         });
                         this.shins.forEach((shin, i) => {
-                            shin.rotation.x = walkCycle * 0.3 * (i === 0 ? 1 : -1);
+                            const legPhase = i === 0 ? 1 : -1;
+                            // Shin bends more when leg is forward
+                            const shinBend = Math.max(0, walkCycle * legPhase) * 0.4;
+                            shin.rotation.x = THREE.MathUtils.lerp(shin.rotation.x, shinBend, 0.2);
                         });
-                        
-                        // Animate arms (upper arms and forearms) - subtle
+                        this.feet.forEach((foot, i) => {
+                            const legPhase = i === 0 ? 1 : -1;
+                            foot.rotation.x = THREE.MathUtils.lerp(foot.rotation.x, -walkCycle * legPhase * 0.2, 0.2);
+                        });
+
+                        // Natural arm swing (opposite to legs)
                         this.upperArms.forEach((upperArm, i) => {
-                            upperArm.rotation.z = (i === 0 ? 0.4 : -0.4) + armSwing * (i === 0 ? -1 : 1) * 0.2;
+                            const armPhase = i === 0 ? -1 : 1;
+                            const targetRotation = (i === 0 ? 0.4 : -0.4) + armSwing * armPhase * 0.3;
+                            upperArm.rotation.z = THREE.MathUtils.lerp(upperArm.rotation.z, targetRotation, 0.15);
                         });
                         this.foreArms.forEach((foreArm, i) => {
-                            foreArm.rotation.z = (i === 0 ? 0.6 : -0.6) + armSwing * (i === 0 ? -1 : 1) * 0.15;
+                            const armPhase = i === 0 ? -1 : 1;
+                            const targetRotation = (i === 0 ? 0.6 : -0.6) + armSwing * armPhase * 0.2;
+                            foreArm.rotation.z = THREE.MathUtils.lerp(foreArm.rotation.z, targetRotation, 0.15);
+                        });
+                    } else if (nearestDist <= 8) {
+                        // In optimal position - standing and observing
+                        this.isMoving = false;
+
+                        // Smooth transition to idle pose
+                        this.thighs.forEach((thigh, i) => {
+                            thigh.rotation.x = THREE.MathUtils.lerp(thigh.rotation.x, 0, 0.1);
+                        });
+                        this.shins.forEach((shin, i) => {
+                            shin.rotation.x = THREE.MathUtils.lerp(shin.rotation.x, 0, 0.1);
+                        });
+                        this.feet.forEach((foot, i) => {
+                            foot.rotation.x = THREE.MathUtils.lerp(foot.rotation.x, 0, 0.1);
+                        });
+
+                        // Idle arm movements - subtle gestures like checking clipboard
+                        this.upperArms.forEach((upperArm, i) => {
+                            const idleGesture = i === 0 ? Math.sin(t * 0.8) * 0.1 : 0;
+                            const targetRotation = (i === 0 ? 0.4 : -0.4) + idleGesture;
+                            upperArm.rotation.z = THREE.MathUtils.lerp(upperArm.rotation.z, targetRotation, 0.05);
+                        });
+                        this.foreArms.forEach((foreArm, i) => {
+                            const idleGesture = i === 0 ? Math.sin(t * 0.8 + 0.5) * 0.15 : 0;
+                            const targetRotation = (i === 0 ? 0.6 : -0.6) + idleGesture;
+                            foreArm.rotation.z = THREE.MathUtils.lerp(foreArm.rotation.z, targetRotation, 0.05);
                         });
                     } else {
-                        // Close enough - just look at package, no movement
-                        // Reset leg/arm positions to idle
-                        this.thighs.forEach(thigh => thigh.rotation.x = 0);
-                        this.shins.forEach(shin => shin.rotation.x = 0);
-                        this.upperArms.forEach((upperArm, i) => upperArm.rotation.z = i === 0 ? 0.4 : -0.4);
-                        this.foreArms.forEach((foreArm, i) => foreArm.rotation.z = i === 0 ? 0.6 : -0.6);
+                        // Package too far - stay put but track with eyes
+                        this.isMoving = false;
+
+                        // Smooth transition to idle
+                        this.thighs.forEach(thigh => thigh.rotation.x = THREE.MathUtils.lerp(thigh.rotation.x, 0, 0.1));
+                        this.shins.forEach(shin => shin.rotation.x = THREE.MathUtils.lerp(shin.rotation.x, 0, 0.1));
+                        this.feet.forEach(foot => foot.rotation.x = THREE.MathUtils.lerp(foot.rotation.x, 0, 0.1));
+                        this.upperArms.forEach((upperArm, i) => {
+                            upperArm.rotation.z = THREE.MathUtils.lerp(upperArm.rotation.z, i === 0 ? 0.4 : -0.4, 0.08);
+                        });
+                        this.foreArms.forEach((foreArm, i) => {
+                            foreArm.rotation.z = THREE.MathUtils.lerp(foreArm.rotation.z, i === 0 ? 0.6 : -0.6, 0.08);
+                        });
                     }
                 } else {
-                    // No packages nearby - stay in place, no movement
+                    // No packages nearby - idle behavior
                     this.isMoving = false;
-                    
-                    // Reset leg/arm positions
-                    this.thighs.forEach(thigh => thigh.rotation.x = 0);
-                    this.shins.forEach(shin => shin.rotation.x = 0);
-                    this.upperArms.forEach((upperArm, i) => upperArm.rotation.z = i === 0 ? 0.4 : -0.4);
-                    this.foreArms.forEach((foreArm, i) => foreArm.rotation.z = i === 0 ? 0.6 : -0.6);
-                    
-                    // Very subtle idle rotation
-                    this.group.rotation.y = Math.sin(t * 0.1) * 0.05;
+
+                    // Smooth transition to neutral idle pose
+                    this.thighs.forEach(thigh => thigh.rotation.x = THREE.MathUtils.lerp(thigh.rotation.x, 0, 0.1));
+                    this.shins.forEach(shin => shin.rotation.x = THREE.MathUtils.lerp(shin.rotation.x, 0, 0.1));
+                    this.feet.forEach(foot => foot.rotation.x = THREE.MathUtils.lerp(foot.rotation.x, 0, 0.1));
+                    this.upperArms.forEach((upperArm, i) => {
+                        upperArm.rotation.z = THREE.MathUtils.lerp(upperArm.rotation.z, i === 0 ? 0.4 : -0.4, 0.08);
+                    });
+                    this.foreArms.forEach((foreArm, i) => {
+                        foreArm.rotation.z = THREE.MathUtils.lerp(foreArm.rotation.z, i === 0 ? 0.6 : -0.6, 0.08);
+                    });
+
+                    // Very subtle idle rotation and breathing motion
+                    const idleRotation = Math.sin(t * 0.2) * 0.05;
+                    this.group.rotation.y = THREE.MathUtils.lerp(this.group.rotation.y, idleRotation, 0.02);
                 }
             }
         }
@@ -1977,15 +2126,14 @@
                 const dx = e.clientX - prevMouse.x;
                 const dy = e.clientY - prevMouse.y;
 
-                // Intuitive controls - match mouse movement direction:
-                // Drag right = rotate camera right (increase theta)
-                // Drag left = rotate camera left (decrease theta)
-                // Drag up = look up (decrease phi)
-                // Drag down = look down (increase phi)
+                // Improved intuitive controls:
+                // Horizontal: Drag right = rotate camera right (view rotates clockwise)
+                // Vertical: Drag up = tilt camera up (look from higher angle)
+                //          Drag down = tilt camera down (look from lower angle)
                 camAngle.theta += dx * mouseSensitivity;
-                camAngle.phi += dy * mouseSensitivity; // Positive dy = look down
-                
-                // Clamp phi to prevent flipping
+                camAngle.phi -= dy * mouseSensitivity; // Inverted for natural feel
+
+                // Clamp phi to prevent camera flipping (keep between nearly-top-down and horizontal)
                 camAngle.phi = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, camAngle.phi));
 
                 prevMouse = { x: e.clientX, y: e.clientY };
